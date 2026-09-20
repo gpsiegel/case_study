@@ -1,0 +1,26 @@
+# CDK
+cdk.out/
+cdk.context.json
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Node (CDK CLI installs)
+node_modules/
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Local env and secrets
+.env
+
+# Temp files from IAM role setup
+*/trust-policy.json
+*/permissions-policy.json
