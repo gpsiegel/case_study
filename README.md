@@ -1,3 +1,5 @@
+![Architecture, CI/CD and test infrastructure](docs/architecture_diagram.svg)
+
 # S3 single-line file processor (AWS CDK, Python)
 
 S3 bucket -> `ObjectCreated` notification -> Python 3.14 Lambda that parses the one-line file.
