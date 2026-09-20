@@ -168,7 +168,7 @@ export AWS_DEFAULT_REGION=us-east-1     # the region you deployed to
 DIR=.
 ```
 
-Steps 2 and 3 are the same for both options. Run them in whichever terminal you used above.
+Steps 5 and 6 are the same for both options. Run them in whichever terminal you used above.
 
 ### 5. Look up the bucket, function and log group
 
