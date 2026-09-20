@@ -69,27 +69,42 @@ Locally, if your credentials live in a named profile, run `export AWS_PROFILE=<p
 creates a role that only trusts workflows on the `main` branch of `gpsiegel/case_study`, and lets that role
 assume the CDK bootstrap roles. Run it with admin-level credentials, and note the role ARN it prints at the end.
 
-**Locally:**
+**Locally: (RECCOMMENDED)**
 
 ```bash
 chmod +x scripts/create-github-oidc-role.sh
 ./scripts/create-github-oidc-role.sh
 ```
 
-**In CloudShell:** create the file, make it executable, and run it:
+**In CloudShell: (OPTIONAL ALTERNATIVE)** upload the file rather than pasting it (Actions -> Upload file), then run it:
 
 ```bash
-nano create-github-oidc-role.sh   # paste the contents of scripts/create-github-oidc-role.sh, save with Ctrl+O, exit with Ctrl+X
 chmod +x create-github-oidc-role.sh
 ./create-github-oidc-role.sh
 ```
 
-(Alternatively, use CloudShell's Actions -> Upload file to upload it from your computer.)
+Avoid pasting the script into `nano`: a truncated paste can cut the script off partway (after the role is
+created but before its permissions are attached) without any error. A complete run ends with
+`Verified: role and cdk-deploy policy are in place.` followed by `Done.` If you don't see both lines, the
+script did not finish. You can also check with `aws iam list-role-policies --role-name github-actions-cdk-deploy`,
+which should list `cdk-deploy`.
 
 To use a different repo or role name, set them inline:
 `REPO=owner/repo ROLE_NAME=my-role ./create-github-oidc-role.sh`.
 To grant more than the default permissions (for example `AdministratorAccess` on a throwaway account), attach
 a policy to the role afterwards. Broader than needed, but handy for troubleshooting a permissions error.
+
+**About the `sub` condition:** newer GitHub repos issue tokens whose `sub` claim includes numeric owner and repo
+IDs, like `repo:gpsiegel@28944387/case_study@1378621657:ref:refs/heads/main`, instead of the classic
+`repo:gpsiegel/case_study:ref:refs/heads/main`. The script's trust policy accepts both forms, with the IDs
+wildcarded (`repo:gpsiegel@*/case_study@*:ref:refs/heads/main`), so it still only trusts your owner, repo name
+and the `main` branch without hard-coding IDs. The trade-off: the IDs exist to stop someone who deletes and
+re-creates an account or repo under the same name from matching, and wildcarding them gives that up. To pin exact
+values instead, run the script with `SUBJECT="<exact sub>"`.
+
+If the workflow fails with `Not authorized to perform sts:AssumeRoleWithWebIdentity`, add a temporary step before
+the credentials step that prints the real `sub` claim (decode the OIDC token from `ACTIONS_ID_TOKEN_REQUEST_URL`)
+and compare it with the role's trust policy.
 
 ### 3. Add settings in GitHub
 

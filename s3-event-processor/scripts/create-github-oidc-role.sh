@@ -9,17 +9,31 @@
 # Run it with admin-level AWS credentials, locally or in AWS CloudShell.
 # Optional overrides:  REPO=owner/repo ROLE_NAME=my-role ./create-github-oidc-role.sh
 #
+# NOTE: newer GitHub repos issue OIDC tokens whose "sub" claim embeds numeric IDs, e.g.
+#   repo:owner@12345/repo@67890:ref:refs/heads/main
+# so by default the trust policy accepts BOTH the classic name-only form and the ID form
+# with the IDs wildcarded (still pinned to your owner, repo name and the main branch).
+# To pin exact values instead, set SUBJECT (it replaces the defaults), e.g.
+#   SUBJECT="repo:owner@12345/repo@67890:ref:refs/heads/main" ./create-github-oidc-role.sh
+#
 set -euo pipefail
 
 REPO="${REPO:-gpsiegel/case_study}"
 ROLE_NAME="${ROLE_NAME:-github-actions-cdk-deploy}"
+OWNER="${REPO%%/*}"
+NAME="${REPO##*/}"
+if [ -n "${SUBJECT:-}" ]; then
+  SUB_JSON="\"${SUBJECT}\""
+else
+  SUB_JSON="\"repo:${OWNER}/${NAME}:ref:refs/heads/main\", \"repo:${OWNER}@*/${NAME}@*:ref:refs/heads/main\""
+fi
 ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
 
 WORKDIR="$(mktemp -d)"
 trap 'rm -rf "$WORKDIR"' EXIT
 
 echo "Account: ${ACCOUNT_ID}"
-echo "Repo:    ${REPO} (main branch only)"
+echo "Subject: ${SUB_JSON}"
 echo "Role:    ${ROLE_NAME}"
 echo
 
@@ -47,8 +61,10 @@ cat > "${WORKDIR}/trust-policy.json" <<EOF
       "Action": "sts:AssumeRoleWithWebIdentity",
       "Condition": {
         "StringEquals": {
-          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
-          "token.actions.githubusercontent.com:sub": "repo:${REPO}:ref:refs/heads/main"
+          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
+        },
+        "StringLike": {
+          "token.actions.githubusercontent.com:sub": [${SUB_JSON}]
         }
       }
     }
